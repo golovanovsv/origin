@@ -13,7 +13,7 @@
 # В репозитории он очень старый
 # Не очень хорошо проверять наличие PIP`а по массиву для установки ПО, но остальные методы сильно сложные
 - set_fact:
-    pip_enabled: "{{ true if ('python-pip' in linux_base_software or 'python-pip' in linux_additional_software) else false}}"
+    pip_enabled: "{{ true if ('python-pip' in base_software or 'python-pip' in additional_software) else false }}"
 
 - block:
   - name: "Check PIP2 installed"

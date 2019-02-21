@@ -1,27 +1,48 @@
 - name: "Choose shell for user | {{ user.login }}"
-  set_facts:
-    shell: user.shell is defined and user.shell is not empty | ternary (user.shell, default_shell)
+  set_fact:
+    shell: "{{ (user.shell is defined and user.shell|length > 0) | ternary (user.shell, default_shell) }}"
+    user_state: "{{ user.state | default('present') }}"
   changed_when: false
 
 - name: "Create user | {{ user.login }}"
   user:
     name: "{{ user.login }}"
     groups: "{{ user.groups }}"
+    comment: "{{ user.description | default('')}}"
     shell: "{{ lookup('first_found', shells) }}"
-    state: "{{ user.state }}"
+    state: "{{ user_state }}"
   vars:
     shells:
       - "/bin/{{ shell }}"
       - "/usr/bin/{{ shell }}"
       - "/usr/local/bin/{{ shell }}"
 
-- name: "Configure public keys | {{ user.login }}"
-  authorized_keys:
-    user: "{{ user.login }}"
-    key: "{{ lookup('url', item) if item | urlsplit('hostname') | mandatory else item }}"
-  loop: "{{ user.ssh_keys }}"
+- name: "Create personal dirs | {{ user.login }}"
+  file:
+    path: "{{ item.dir }}"
+    state: directory
+    owner: "{{ user.login }}"
+    group: "{{ user.login }}"
+    mode: "{{ item.mode | default(0644)}}"
+  loop: "{{ user.dirs }}"
+  when: user.dirs is defined and user.dirs|length > 0
 
-- name: "Transfer configs | {{ user.login }}"
-  block:
+- name: "Remove homedir | {{ user.login }}"
+  file:
+    path: "/home/{{ user.login }}"
+    state: absent
+  when: user_state == 'absent'
 
-  loop: user.configs
+- block:
+  - name: "Configure public keys | {{ user.login }}"
+    authorized_key:
+      user: "{{ user.login }}"
+      key: "{{ lookup('url', item) if item | urlsplit('hostname') | mandatory else item }}"
+    loop: "{{ user.ssh_keys }}"
+
+  - name: "Transfer configs | {{ user.login }}"
+    include_tasks: user_config.yml
+    loop: "{{ user.configs }}"
+    loop_control:
+      loop_var: config
+  when: user_state == 'present'

@@ -8,7 +8,13 @@
   template:
     src: "resolv.conf.j2"
     dest: /etc/resolv.conf
-  when: (dns_servers_ipv4 is not empty) or (dns_servers_ipv6 is not empty)
+  when: (dns_servers_ipv4 | length > 0) or (dns_servers_ipv6 | length > 0)
+
+- name: "Configure sudoers"
+  template:
+    src: sudoers.j2
+    dest: "{{ /usr/local/etc/sudoers if ansible_distribution == 'FreeBSD' else /etc/sudoers }}"
+    mode: 0644
 
 # Настраиваем ntp-клиента
 - name: "Configure timezone | localtime"
@@ -21,6 +27,7 @@
 
 # ansible_service_mgr:
 #   - systemd - systemd
+#   - upstart - CentOS
 #   - bsdinit - FreeBSD
 - name: "Configure timesyncd.conf"
   template:
@@ -29,7 +36,7 @@
     owner: root
     group: root
     mode: 0644
-  when: ansible_service_mgr == "systemd" and ntp_servers is not empty
+  when: ansible_service_mgr == "systemd" and ntp_servers|length > 0
   notify: timesyncd reload
 
 - name: "Configure ntpd.conf"
@@ -49,4 +56,4 @@
       owner: root
       group: wheel
       mode: 0644
-  when: ansible_service_mgr == "bsdinit" and ntp_servers is not empty
+  when: ansible_service_mgr in ["bsdinit", "upstart"] and ntp_servers|length > 0
