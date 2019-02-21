@@ -10,7 +10,7 @@ dns_servers_ipv6:
 
 ### Параметры NTP по-умолчанию
 ntp_servers: []
-ntp_timezone: "Europe/Moscow"
+ntp_timezone: ""
 
 ### Дополнительные корневые сертификаты
 root_cas: []

@@ -17,13 +17,15 @@
     mode: 0644
 
 # Настраиваем ntp-клиента
-- name: "Configure timezone | localtime"
-  command: "cp /usr/share/zoneinfo{{ ntp_timezone }} /etc/localtime"
-  changed_when: false
+- block:
+  - name: "Configure timezone | localtime"
+    command: "cp /usr/share/zoneinfo{{ ntp_timezone }} /etc/localtime"
+    changed_when: false
 
-- name: "Configure timezone | timezone"
-  command: "echo {{ ntp_timezone }} > /etc/timezone"
-  changed_when: false
+  - name: "Configure timezone | timezone"
+    command: "echo {{ ntp_timezone }} > /etc/timezone"
+    changed_when: false
+  when: ntp_timezone is defined ang ntp_timezone|length > 0
 
 # ansible_service_mgr:
 #   - systemd - systemd
