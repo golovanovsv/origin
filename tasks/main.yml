@@ -1,0 +1,19 @@
+# Настройка ОС: hostname, DNS, NTP и т.д.
+- import_tasks: os.yml
+  become: yes
+  tags:
+    - origin_os
+
+# Установка софта
+- import_tasks: soft.yml
+  become: yes
+  tags:
+    - origin_soft
+
+# Создание и настройка пользователей
+- include_tasks: user.yml
+  loop: "{{ users }}"
+  loop_control:
+    loop_var: user
+  tags:
+    - origin_user

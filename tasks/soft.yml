@@ -1,0 +1,53 @@
+# Устанавливаем необходимый софт
+- name: "Install software"
+  action: >
+    {{ ansible_pkg_mgr }}
+    update_cache: yes
+    name: "{{ item }}"
+    state: present
+  loop:
+    - "{{ base_software }}"
+    - "{{ additional_software }}"
+
+# Устанавливаем/обновляем PIP
+# В репозитории он очень старый
+# Не очень хорошо проверять наличие PIP`а по массиву для установки ПО, но остальные методы сильно сложные
+- set_fact:
+    pip_enabled: "{{ true if ('python-pip' in linux_base_software or 'python-pip' in linux_additional_software) else false}}"
+
+- block:
+  - name: "Check PIP2 installed"
+    stat:
+      path: "/usr/local/bin/pip2"
+    register: pip2_bin
+
+  - name: "Check PIP3 installed"
+    stat:
+      path: "/usr/local/bin/pip3"
+    register: pip3_bin
+
+  - set_fact:
+      pip2_installed: "{{ pip2_bin.stat.exists }}"
+      pip3_installed: "{{ pip3_bin.stat.exists }}"
+
+  - name: "Install PIP"
+    block:
+      - name: "Download PIP installer"
+        get_url:
+          url: "https://bootstrap.pypa.io/get-pip.py"
+          dest: /tmp/get-pip.py
+
+      - name: "Install PIP2"
+        command: "python /tmp/get-pip.py"
+        when: not pip2_installed
+
+      - name: "Install PIP3"
+        command: "python3 /tmp/get-pip.py"
+        when: not pip3_installed
+
+      - name: "Clean up"
+        file:
+          path: "/tmp/get-pip.py"
+          state: absent
+    when: not (pip2_installed or pip3_installed)
+  when: pip_enabled

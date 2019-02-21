@@ -1,0 +1,24 @@
+galaxy_info:
+  author: "GolovanovSV <golovanovsv@gmail.com>"
+  description: "An [Ansible](https://www.ansible.com) role to define a base configuration state"
+  license: MIT
+  min_ansible_version: 1.7
+  dependencies: []
+  platforms:
+    - name: Ubuntu
+      versions:
+        - xenial
+    - name: Debian
+      versions:
+        - stretch
+    - name: FreeBSD
+      versions:
+        - 10
+        - 11
+        - 12
+  galaxy_tags:
+    - Ubuntu
+    - Debian
+    - FreeBSD
+    - system
+    - base

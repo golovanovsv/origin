@@ -1,0 +1,27 @@
+- name: "Choose shell for user | {{ user.login }}"
+  set_facts:
+    shell: user.shell is defined and user.shell is not empty | ternary (user.shell, default_shell)
+  changed_when: false
+
+- name: "Create user | {{ user.login }}"
+  user:
+    name: "{{ user.login }}"
+    groups: "{{ user.groups }}"
+    shell: "{{ lookup('first_found', shells) }}"
+    state: "{{ user.state }}"
+  vars:
+    shells:
+      - "/bin/{{ shell }}"
+      - "/usr/bin/{{ shell }}"
+      - "/usr/local/bin/{{ shell }}"
+
+- name: "Configure public keys | {{ user.login }}"
+  authorized_keys:
+    user: "{{ user.login }}"
+    key: "{{ lookup('url', item) if item | urlsplit('hostname') | mandatory else item }}"
+  loop: "{{ user.ssh_keys }}"
+
+- name: "Transfer configs | {{ user.login }}"
+  block:
+
+  loop: user.configs

@@ -1,0 +1,19 @@
+# Пример работы с массивом пользователей
+#  ssh_keys - может быть как строкой с ключем так и url где находится ключ
+#  configs.src - может быть как именем шадлона так и url где находится конфигурационный файл
+users:
+  - login: "ann"
+    description: "Little Anny"
+    shell: "zsh"
+    state: present
+    configs:
+      - src: "https://raw.githubusercontent.com/yourepo/configs/master/.zshrc"
+        dst: ".zsh"
+      - src: "myconfig.conf.j2"
+        dst: "myconfig"
+    ssh_keys:
+      - "https://raw.githubusercontent.com/yourepo/configs/master/anny.pub"
+      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8.. anny@localhost"
+    groups:
+      - wheel
+      - docker
