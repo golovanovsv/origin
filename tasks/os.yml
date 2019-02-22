@@ -25,7 +25,7 @@
   - name: "Configure timezone | timezone"
     command: "echo {{ ntp_timezone }} > /etc/timezone"
     changed_when: false
-  when: ntp_timezone is defined ang ntp_timezone|length > 0
+  when: ntp_timezone is defined and ntp_timezone|length > 0
 
 # ansible_service_mgr:
 #   - systemd - systemd

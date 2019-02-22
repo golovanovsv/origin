@@ -11,6 +11,15 @@
     - origin_soft
 
 # Создание и настройка пользователей
+- name: "Get OS group list"
+  shell: "cat /etc/group | awk -F':' '{print $1}'"
+  register: ugroup_raw
+  changed_when: false
+
+- name: "Define system groups array"
+  set_fact:
+    ugroups: "{{ ugroup_raw.stdout_lines }}"
+
 - include_tasks: user.yml
   become: yes
   loop: "{{ users }}"

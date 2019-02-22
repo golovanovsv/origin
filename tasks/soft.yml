@@ -1,19 +1,33 @@
 # Устанавливаем необходимый софт
-- name: "Install software"
-  action: >
-    {{ ansible_pkg_mgr }}
+# ansible_pkg_mgr:
+#    pkgng - FreeBSD
+#    apt - Linux apt
+
+- name: "Install software | apt"
+  apt:
     update_cache: yes
     name: "{{ item }}"
     state: present
   loop:
-    - "{{ base_software }}"
-    - "{{ additional_software }}"
+    - "{{ shared_software }}"
+    - "{{ linux_software }}"
+  when: ansible_pkg_mgr == "apt"
+
+- name: "Install software | pkgng"
+  pkgng:
+    cached: no
+    name: "{{ item }}"
+  loop:
+    - "{{ shared_software }}"
+    - "{{ freebsd_software }}"
+  when: ansible_pkg_mgr == "pkgng"
 
 # Устанавливаем/обновляем PIP
 # В репозитории он очень старый
 # Не очень хорошо проверять наличие PIP`а по массиву для установки ПО, но остальные методы сильно сложные
 - set_fact:
-    pip_enabled: "{{ true if ('python-pip' in base_software or 'python-pip' in additional_software) else false }}"
+    #pip_enabled: "{{ true if ('python-pip' in base_software or 'python-pip' in additional_software) else false }}"
+    pip_enabled: true
 
 - block:
   - name: "Check PIP2 installed"
@@ -26,9 +40,34 @@
       path: "/usr/local/bin/pip3"
     register: pip3_bin
 
-  - set_fact:
-      pip2_installed: "{{ pip2_bin.stat.exists }}"
-      pip3_installed: "{{ pip3_bin.stat.exists }}"
+  - name: "Define python facts"
+    set_fact:
+      pip2_absent: "{{ not pip2_bin.stat.exists }}"
+      pip3_absent: "{{ not pip3_bin.stat.exists }}"
+      python2: false
+      python3: false
+
+  - name: "Finding python2"
+    set_fact:
+      python2: "{{ item }}"
+    with_first_found:
+      - files:
+        - "/usr/bin/python2"
+        - "/usr/bin/python2.7"
+        - "/usr/local/bin/python2"
+        - "/usr/local/bin/python2.7"
+        skip: true
+
+  - name: "Finding python3"
+    set_fact:
+      python3: "{{ item }}"
+    with_first_found:
+      - files:
+        - "/usr/bin/python3"
+        - "/usr/bin/python3.5"
+        - "/usr/local/bin/python3"
+        - "/usr/local/bin/python3.5"
+        skip: true
 
   - name: "Install PIP"
     block:
@@ -36,18 +75,20 @@
         get_url:
           url: "https://bootstrap.pypa.io/get-pip.py"
           dest: /tmp/get-pip.py
+        changed_when: false
 
       - name: "Install PIP2"
-        command: "python /tmp/get-pip.py"
-        when: not pip2_installed
+        command: "{{ python2 }}n /tmp/get-pip.py"
+        when: pip2_absent and not python2
 
       - name: "Install PIP3"
-        command: "python3 /tmp/get-pip.py"
-        when: not pip3_installed
+        command: "{{ python3 }} /tmp/get-pip.py"
+        when: pip3_absent and not python3
 
       - name: "Clean up"
         file:
           path: "/tmp/get-pip.py"
           state: absent
-    when: not (pip2_installed or pip3_installed)
+        changed_when: false
+    when: pip2_absent or pip3_absent
   when: pip_enabled
