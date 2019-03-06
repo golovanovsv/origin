@@ -13,13 +13,13 @@
 - name: "Configure sudoers"
   template:
     src: sudoers.j2
-    dest: "{{ /usr/local/etc/sudoers if ansible_distribution == 'FreeBSD' else /etc/sudoers }}"
+    dest: "{{ '/usr/local/etc/sudoers' if ansible_distribution == 'FreeBSD' else '/etc/sudoers' }}"
     mode: 0644
 
 # Настраиваем ntp-клиента
 - block:
   - name: "Configure timezone | localtime"
-    command: "cp /usr/share/zoneinfo{{ ntp_timezone }} /etc/localtime"
+    command: "cp /usr/share/zoneinfo/{{ ntp_timezone }} /etc/localtime"
     changed_when: false
 
   - name: "Configure timezone | timezone"
