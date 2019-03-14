@@ -57,10 +57,12 @@
       user: "{{ user.login }}"
       key: "{{ lookup('url', item) if item | urlsplit('hostname') | mandatory else item }}"
     loop: "{{ user.ssh_keys }}"
+    when: user.ssh_keys is defined
 
   - name: "Transfer configs | {{ user.login }}"
     include_tasks: user_config.yml
     loop: "{{ user.configs }}"
     loop_control:
       loop_var: config
+    when: config is defined
   when: user_state == 'present'

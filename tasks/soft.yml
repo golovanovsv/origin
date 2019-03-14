@@ -28,46 +28,78 @@
 - set_fact:
     #pip_enabled: "{{ true if ('python-pip' in base_software or 'python-pip' in additional_software) else false }}"
     pip_enabled: true
+    pip2_absent: true
+    pip3_absent: true
+    python2: false
+    python3: false
 
 - block:
-  - name: "Check PIP2 installed"
+  - name: "Finding PIP2"
     stat:
-      path: "/usr/local/bin/pip2"
-    register: pip2_bin
+      path: "{{ item }}"
+    loop:
+      - "/usr/local/bin/pip2"
+      - "/usr/bin/pip2"
+      - "/bin/pip2"
+    register: pip2_stat
+
+  - name: "Check PIP2 installed"
+    set_fact:
+      pip2_absent: false
+    loop: "{{ pip2_stat.results }}"
+    when: item.stat.exists
+
+  - name: "Finding PIP3"
+    stat:
+      path: "{{ item }}"
+    loop:
+      - "/usr/local/bin/pip3"
+      - "/usr/bin/pip3"
+      - "/bin/pip3"
+    register: pip3_stat
 
   - name: "Check PIP3 installed"
-    stat:
-      path: "/usr/local/bin/pip3"
-    register: pip3_bin
-
-  - name: "Define python facts"
     set_fact:
-      pip2_absent: "{{ not pip2_bin.stat.exists }}"
-      pip3_absent: "{{ not pip3_bin.stat.exists }}"
-      python2: false
-      python3: false
+      pip3_absent: false
+    loop: "{{ pip3_stat.results }}"
+    when: item.stat.exists
 
   - name: "Finding python2"
+    stat:
+      path: "{{ item }}"
+    loop:
+      - "/usr/local/bin/python2"
+      - "/usr/local/bin/python2.7"
+      - "/usr/bin/python2"
+      - "/usr/bin/python2.7"
+    register: python2_stat
+
+  - name: "Select python2"
     set_fact:
-      python2: "{{ item }}"
-    with_first_found:
-      - files:
-        - "/usr/bin/python2"
-        - "/usr/bin/python2.7"
-        - "/usr/local/bin/python2"
-        - "/usr/local/bin/python2.7"
-        skip: true
+      python2: "{{ item.item }}"
+    loop: "{{ python2_stat.results }}"
+    when: item.stat.exists
 
   - name: "Finding python3"
+    stat:
+      path: "{{ item }}"
+    loop:
+      - "/usr/local/bin/python3"
+      - "/usr/local/bin/python3.5"
+      - "/usr/bin/python3"
+      - "/usr/bin/python3.5"
+    register: python3_stat
+
+  - name: "Select python3"
     set_fact:
-      python3: "{{ item }}"
-    with_first_found:
-      - files:
-        - "/usr/bin/python3"
-        - "/usr/bin/python3.5"
-        - "/usr/local/bin/python3"
-        - "/usr/local/bin/python3.5"
-        skip: true
+      python3: "{{ item.item }}"
+    loop: "{{ python3_stat.results }}"
+    when: item.stat.exists
+
+  - debug: var=pip2_absent
+  - debug: var=pip3_absent
+  - debug: var=python2
+  - debug: var=python3
 
   - name: "Install PIP"
     block:
@@ -78,12 +110,12 @@
         changed_when: false
 
       - name: "Install PIP2"
-        command: "{{ python2 }}n /tmp/get-pip.py"
-        when: pip2_absent and not python2
+        command: "{{ python2 }} /tmp/get-pip.py"
+        when: pip2_absent and python2|bool
 
       - name: "Install PIP3"
         command: "{{ python3 }} /tmp/get-pip.py"
-        when: pip3_absent and not python3
+        when: pip3_absent and python3|bool
 
       - name: "Clean up"
         file:
@@ -92,3 +124,9 @@
         changed_when: false
     when: pip2_absent or pip3_absent
   when: pip_enabled
+
+- name: "Install additional python software"
+  pip:
+    name: "{{ item }}"
+  loop:
+    - "{{ additional_python_software }}"
