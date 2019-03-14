@@ -1,0 +1,68 @@
+- name: "Choose shell for user | {{ user.login }}"
+  set_fact:
+    shell_name: "{{ (user.shell is defined and user.shell|length > 0) | ternary (user.shell, default_shell) }}"
+    user_state: "{{ user.state | default('present') }}"
+    shell: false
+  changed_when: false
+
+- name: "Get shell status on remote host"
+  stat:
+    path: "{{ item }}"
+  loop:
+    - "/bin/{{ shell_name }}"
+    - "/usr/bin/{{ shell_name }}"
+    - "/usr/local/bin/{{ shell_name }}"
+  register: shell_stat
+
+- name: "Select existing shell"
+  set_fact:
+    shell: "{{ item.item }}"
+  loop: "{{ shell_stat.results }}"
+  when: item.stat.exists
+
+- name: "Create user | {{ user.login }}"
+  user:
+    name: "{{ user.login }}"
+    comment: "{{ user.description | default('')}}"
+    shell: "{{ shell }}"
+    state: "{{ user_state }}"
+
+- name: "Create personal dirs | {{ user.login }}"
+  file:
+    path: "{{ item.dir }}"
+    state: directory
+    owner: "{{ user.login }}"
+    group: "{{ user.login }}"
+    mode: "{{ item.mode | default(0644)}}"
+  loop: "{{ user.dirs }}"
+  when: user.dirs is defined and user.dirs|length > 0
+
+- name: "Remove homedir | {{ user.login }}"
+  file:
+    path: "/home/{{ user.login }}"
+    state: absent
+  when: user_state == 'absent'
+
+- block:
+  - name: "Add user to groups | {{ user.login }}"
+    user:
+      name: "{{ user.login }}"
+      append: yes
+      groups: "{{ item }}"
+    loop: "{{ user.groups }}"
+    when: item in ugroups
+
+  - name: "Configure public keys | {{ user.login }}"
+    authorized_key:
+      user: "{{ user.login }}"
+      key: "{{ lookup('url', item) if item | urlsplit('hostname') | mandatory else item }}"
+    loop: "{{ user.ssh_keys }}"
+    when: user.ssh_keys is defined
+
+  - name: "Transfer configs | {{ user.login }}"
+    include_tasks: user_config.yml
+    loop: "{{ user.configs }}"
+    loop_control:
+      loop_var: config
+    when: config is defined
+  when: user_state == 'present'

@@ -1,0 +1,61 @@
+# Настройка имени хоста
+- name: "Configure hostname"
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+# Настраиваем DNS-клиент
+- name: "Configure resolv.conf"
+  template:
+    src: "resolv.conf.j2"
+    dest: /etc/resolv.conf
+  when: (dns_servers_ipv4 | length > 0) or (dns_servers_ipv6 | length > 0)
+
+- name: "Configure sudoers"
+  template:
+    src: sudoers.j2
+    dest: "{{ '/usr/local/etc/sudoers' if ansible_distribution == 'FreeBSD' else '/etc/sudoers' }}"
+    mode: 0644
+
+# Настраиваем ntp-клиента
+- block:
+  - name: "Configure timezone | localtime"
+    command: "cp /usr/share/zoneinfo/{{ ntp_timezone }} /etc/localtime"
+    changed_when: false
+
+  - name: "Configure timezone | timezone"
+    command: "echo {{ ntp_timezone }} > /etc/timezone"
+    changed_when: false
+  when: ntp_timezone is defined and ntp_timezone|length > 0
+
+# ansible_service_mgr:
+#   - systemd - systemd
+#   - upstart - CentOS
+#   - bsdinit - FreeBSD
+- name: "Configure timesyncd.conf"
+  template:
+    src: "timesyncd.conf.j2"
+    dest: /etc/systemd/timesyncd.conf
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_service_mgr == "systemd" and ntp_servers|length > 0
+  notify: timesyncd reload
+
+- name: "Configure ntpd.conf"
+  block:
+  - name: "Check ntpd"
+    lineinfile:
+      dest: /etc/rc.conf
+      backrefs: yes
+      regexp: "^ntpd_enable="
+      line: "ntpd_enable=\"YES\""
+      state: present
+
+  - name: "Configure ntpd.conf"
+    template:
+      src: "ntpd.conf.j2"
+      dest: /etc/ntpd.conf
+      owner: root
+      group: wheel
+      mode: 0644
+  when: ansible_service_mgr in ["bsdinit", "upstart"] and ntp_servers|length > 0

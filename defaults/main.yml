@@ -1,0 +1,52 @@
+### Параметры DNS по-умолчанию
+dns_timeout: 5
+dns_servers_ipv4:
+  - "8.8.8.8"
+  - "8.8.4.4"
+
+dns_servers_ipv6:
+  - "2001:4860:4860::8888"
+  - "2001:4860:4860::8844"
+
+### Параметры NTP по-умолчанию
+ntp_servers: []
+ntp_timezone: ""
+
+### Дополнительные корневые сертификаты
+root_cas: []
+
+### Перечень ПО
+# Перечень по-умолчанию.
+# Всегда нужно помнить, что в разных дистрибутивах ОС софт может называться по-разному.
+# Признаком хорошего тона является сортировка списков по алфавиту ;)
+shared_software:
+  - curl
+  - htop
+  - iftop
+  - lsof
+  - mc
+  - openssl
+  - smartmontools
+  - sudo
+  - vim
+  - wget
+  - zsh
+
+linux_software:
+  - bridge-utils
+  - ca-certificates
+  - dnsutils
+  - iotop
+  - net-tools
+  - python-pip
+
+freebsd_software: []
+
+# Индивидуальный перечень ПО. Облегчает конфигурирование из конкретных плейбуков.
+# Не надо переопределять весь base_software в случаях если нужно дополнительное ПО в ИС
+additional_software: []
+additional_python_software: []
+
+### Общие параметры пользователей
+users: []
+default_shell: "bash"

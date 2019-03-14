@@ -1,0 +1,4 @@
+- name: "systemd timesyncd reload"
+  service:
+    name: "systemd-timesyncd"
+    state: reloaded
