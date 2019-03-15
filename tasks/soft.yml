@@ -11,22 +11,38 @@
   loop:
     - "{{ shared_software }}"
     - "{{ linux_software }}"
+    - "{{ additional_software }}"
   when: ansible_pkg_mgr == "apt"
 
-- name: "Install software | pkgng"
-  pkgng:
-    cached: no
+- name: "Install software| yum"
+  yum:
     name: "{{ item }}"
+    state: present
   loop:
     - "{{ shared_software }}"
-    - "{{ freebsd_software }}"
+    - "{{ linux_software }}"
+    - "{{ additional_software }}"
+  when: ansible_pkg_mgr == "yum"
+
+- block:
+    - name: "Install software | force update pkgng"
+      shell: "pkgng update -fq"
+      when: freebsd_pkgng_forceupdate
+      changed_when: false
+
+    - name: "Install software | pkgng"
+      pkgng:
+        cached: no
+        name: "{{ item }}"
+      loop:
+        - "{{ shared_software }}"
+        - "{{ freebsd_software }}"
+        - "{{ additional_software }}"
   when: ansible_pkg_mgr == "pkgng"
 
 # Устанавливаем/обновляем PIP
-# В репозитории он очень старый
-# Не очень хорошо проверять наличие PIP`а по массиву для установки ПО, но остальные методы сильно сложные
+# PIP устанавливается при наличии на сервере python2/python3
 - set_fact:
-    #pip_enabled: "{{ true if ('python-pip' in base_software or 'python-pip' in additional_software) else false }}"
     pip_enabled: true
     pip2_absent: true
     pip3_absent: true
@@ -68,15 +84,16 @@
     stat:
       path: "{{ item }}"
     loop:
-      - "/usr/local/bin/python2"
-      - "/usr/local/bin/python2.7"
       - "/usr/bin/python2"
+      - "/usr/local/bin/python2"
       - "/usr/bin/python2.7"
+      - "/usr/local/bin/python2.7"
     register: python2_stat
 
   - name: "Select python2"
     set_fact:
-      python2: "{{ item.item }}"
+      python2_bin: "{{ item.item }}"
+      python2: true
     loop: "{{ python2_stat.results }}"
     when: item.stat.exists
 
@@ -84,22 +101,18 @@
     stat:
       path: "{{ item }}"
     loop:
-      - "/usr/local/bin/python3"
-      - "/usr/local/bin/python3.5"
       - "/usr/bin/python3"
+      - "/usr/local/bin/python3"
       - "/usr/bin/python3.5"
+      - "/usr/local/bin/python3.5"
     register: python3_stat
 
   - name: "Select python3"
     set_fact:
-      python3: "{{ item.item }}"
+      python3_bin: "{{ item.item }}"
+      python3: true
     loop: "{{ python3_stat.results }}"
     when: item.stat.exists
-
-  - debug: var=pip2_absent
-  - debug: var=pip3_absent
-  - debug: var=python2
-  - debug: var=python3
 
   - name: "Install PIP"
     block:
@@ -110,12 +123,12 @@
         changed_when: false
 
       - name: "Install PIP2"
-        command: "{{ python2 }} /tmp/get-pip.py"
-        when: pip2_absent and python2|bool
+        command: "{{ python2_bin }} /tmp/get-pip.py"
+        when: pip2_absent and python2
 
       - name: "Install PIP3"
-        command: "{{ python3 }} /tmp/get-pip.py"
-        when: pip3_absent and python3|bool
+        command: "{{ python3_bin }} /tmp/get-pip.py"
+        when: pip3_absent and python3
 
       - name: "Clean up"
         file:
@@ -129,4 +142,5 @@
   pip:
     name: "{{ item }}"
   loop:
+    - "setuptools"
     - "{{ additional_python_software }}"
