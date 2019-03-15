@@ -35,11 +35,11 @@ shared_software:
 linux_software:
   - bridge-utils
   - ca-certificates
-  - dnsutils
+  - "{{ 'dnsutils' if ansible_distribution in ['Debian', 'Ubuntu'] else 'bind-utils' }}"
   - iotop
   - net-tools
-  - python-pip
 
+freebsd_pkgng_forceupdate: false
 freebsd_software: []
 
 # Индивидуальный перечень ПО. Облегчает конфигурирование из конкретных плейбуков.

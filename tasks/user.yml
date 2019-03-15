@@ -23,7 +23,7 @@
 - name: "Create user | {{ user.login }}"
   user:
     name: "{{ user.login }}"
-    comment: "{{ user.description | default('')}}"
+    comment: "{{ user.description | default('') }}"
     shell: "{{ shell }}"
     state: "{{ user_state }}"
 
