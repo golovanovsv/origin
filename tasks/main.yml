@@ -20,10 +20,11 @@
   set_fact:
     ugroups: "{{ ugroup_raw.stdout_lines }}"
 
-- include_tasks: user.yml
-  become: yes
-  loop: "{{ users }}"
-  loop_control:
-    loop_var: user
-  tags:
-    - origin_user
+- block:
+    - include_tasks: user.yml
+      loop: "{{ users }}"
+      loop_control:
+        loop_var: user
+      tags:
+        - origin_user
+  become: true
